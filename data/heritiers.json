@@ -66,9 +66,9 @@
     "rang": "Chūnin",
     "clan": "Hoshigaki",
     "wins": 0,
-    "losses": 0,
+    "losses": 1,
     "titre": null,
-    "position": 6,
+    "position": 7,
     "actif": true
   },
   {
@@ -80,24 +80,11 @@
     "wins": 0,
     "losses": 0,
     "titre": null,
-    "position": 7,
+    "position": 8,
     "actif": true
   },
   {
     "id": "8",
-    "nom_personnage": "",
-    "pseudo_joueur": "",
-    "rang": "Chūnin",
-    "clan": null,
-    "wins": 0,
-    "losses": 0,
-    "titre": null,
-    "position": 8,
-    "actif": true,
-    "vacant": true
-  },
-  {
-    "id": "9",
     "nom_personnage": "",
     "pseudo_joueur": "",
     "rang": "Chūnin",
@@ -110,7 +97,7 @@
     "vacant": true
   },
   {
-    "id": "10",
+    "id": "9",
     "nom_personnage": "",
     "pseudo_joueur": "",
     "rang": "Chūnin",
@@ -121,5 +108,17 @@
     "position": 10,
     "actif": true,
     "vacant": true
+  },
+  {
+    "id": "1780124654038",
+    "nom_personnage": "jsks",
+    "pseudo_joueur": "jsus",
+    "rang": "Chūnin",
+    "clan": null,
+    "wins": 1,
+    "losses": 0,
+    "titre": null,
+    "position": 6,
+    "actif": true
   }
 ]
