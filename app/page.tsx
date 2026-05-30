@@ -20,18 +20,8 @@ export default function HomePage() {
           margin: 0,
           lineHeight: 1.1,
         }}>
-          霧の継承者
-        </h1>
-        <h2 style={{
-          fontFamily: 'var(--font-shippori), Georgia, serif',
-          fontSize: 'clamp(1.1rem, 2.5vw, 1.5rem)',
-          fontWeight: 400,
-          color: 'var(--color-pearl)',
-          margin: '0.5rem 0 0',
-          letterSpacing: '0.05em',
-        }}>
           Héritiers de la Brume
-        </h2>
+        </h1>
         <p style={{ fontSize: '0.875rem', color: 'var(--color-silver)', marginTop: '0.75rem', letterSpacing: '0.05em' }}>
           Tournoi officiel de Kirigakure
         </p>

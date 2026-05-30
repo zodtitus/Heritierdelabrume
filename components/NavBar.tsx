@@ -36,7 +36,7 @@ export default function NavBar() {
             letterSpacing: '0.05em',
             fontWeight: 600,
           }}>
-            霧の継承者
+            Héritiers de la Brume
           </span>
         </Link>
 
