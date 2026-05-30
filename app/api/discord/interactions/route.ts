@@ -33,7 +33,7 @@ function btn(customId: string, label: string, style: number) {
 
 function options(heritiers: Heritier[], excludeId?: string) {
   return heritiers
-    .filter(h => h.actif && h.id !== excludeId)
+    .filter(h => h.actif && !h.vacant && h.nom_personnage && h.id !== excludeId)
     .sort((a, b) => a.position - b.position)
     .map(h => ({
       label: h.nom_personnage,
