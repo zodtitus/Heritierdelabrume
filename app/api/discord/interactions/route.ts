@@ -1,8 +1,7 @@
 import { NextRequest } from 'next/server'
-import { createVerify } from 'node:crypto'
+import { verify as cryptoVerify, createPublicKey } from 'node:crypto'
 import { readHeritiers, writeHeritiers, findHeritier } from '@/lib/github'
 
-// Types Discord minimaux
 interface DiscordInteraction {
   type: number
   data?: {
@@ -13,36 +12,35 @@ interface DiscordInteraction {
   user?: { username: string }
 }
 
+// Ed25519 SPKI DER header — préfixe fixe pour toutes les clés Ed25519
+const DER_HEADER = Buffer.from('302a300506032b6570032100', 'hex')
+
 function verifyDiscordSignature(publicKey: string, signature: string, timestamp: string, body: string): boolean {
   try {
-    return createVerify('ed25519')
-      .update(Buffer.from(timestamp + body))
-      .verify(Buffer.from(publicKey, 'hex'), Buffer.from(signature, 'hex'))
+    const keyDer = Buffer.concat([DER_HEADER, Buffer.from(publicKey, 'hex')])
+    const key = createPublicKey({ key: keyDer, format: 'der', type: 'spki' })
+    return cryptoVerify(null, Buffer.from(timestamp + body), key, Buffer.from(signature, 'hex'))
   } catch {
     return false
   }
 }
 
 function reply(content: string, ephemeral = false) {
-  return Response.json({
-    type: 4,
-    data: { content, flags: ephemeral ? 64 : 0 },
-  })
+  return Response.json({ type: 4, data: { content, flags: ephemeral ? 64 : 0 } })
 }
 
 export async function POST(request: NextRequest) {
-  const rawBody = await request.text()
+  const rawBody  = await request.text()
   const signature = request.headers.get('x-signature-ed25519') ?? ''
   const timestamp  = request.headers.get('x-signature-timestamp') ?? ''
 
-  const publicKey = process.env.DISCORD_PUBLIC_KEY!
-  if (!verifyDiscordSignature(publicKey, signature, timestamp, rawBody)) {
+  if (!verifyDiscordSignature(process.env.DISCORD_PUBLIC_KEY!, signature, timestamp, rawBody)) {
     return new Response('Invalid signature', { status: 401 })
   }
 
   const interaction = JSON.parse(rawBody) as DiscordInteraction
 
-  // PING — Discord vérifie que l'endpoint existe
+  // PING — Discord vérifie que l'endpoint répond
   if (interaction.type === 1) {
     return Response.json({ type: 1 })
   }
@@ -52,17 +50,14 @@ export async function POST(request: NextRequest) {
     const { name, options = [] } = interaction.data
     const get = (k: string) => options.find(o => o.name === k)?.value ?? ''
 
-    // ── /resultat gagnant:[nom] perdant:[nom] ──────────────────────────────
+    // ── /resultat ─────────────────────────────────────────────────────────
     if (name === 'resultat') {
       const nomGagnant = get('gagnant')
-      const nomPerdant = get('perdant')
+      const nomPerdant  = get('perdant')
 
-      if (!nomGagnant || !nomPerdant) {
-        return reply('❌ Précise le gagnant et le perdant.', true)
-      }
+      if (!nomGagnant || !nomPerdant) return reply('❌ Précise le gagnant et le perdant.', true)
 
-      let heritiers: Awaited<ReturnType<typeof readHeritiers>>['heritiers']
-      let sha: string
+      let heritiers: Awaited<ReturnType<typeof readHeritiers>>['heritiers'], sha: string
       try {
         ({ heritiers, sha } = await readHeritiers())
       } catch {
@@ -72,9 +67,9 @@ export async function POST(request: NextRequest) {
       const gagnant = findHeritier(heritiers, nomGagnant)
       const perdant  = findHeritier(heritiers, nomPerdant)
 
-      if (!gagnant) return reply(`❌ Héritier introuvable : **${nomGagnant}**\nVérifie l'orthographe du nom.`, true)
-      if (!perdant)  return reply(`❌ Héritier introuvable : **${nomPerdant}**\nVérifie l'orthographe du nom.`, true)
-      if (gagnant.id === perdant.id) return reply('❌ Le gagnant et le perdant ne peuvent pas être le même personnage.', true)
+      if (!gagnant) return reply(`❌ Personnage introuvable : **${nomGagnant}**`, true)
+      if (!perdant)  return reply(`❌ Personnage introuvable : **${nomPerdant}**`, true)
+      if (gagnant.id === perdant.id) return reply('❌ Le gagnant et le perdant ne peuvent pas être identiques.', true)
 
       const updated = heritiers.map(h => {
         if (h.id === gagnant.id) return { ...h, wins: h.wins + 1 }
@@ -85,24 +80,20 @@ export async function POST(request: NextRequest) {
       const reporter = interaction.member?.user.username ?? interaction.user?.username ?? 'Inconnu'
 
       try {
-        await writeHeritiers(
-          updated,
-          sha,
-          `bot: ${gagnant.nom_personnage} bat ${perdant.nom_personnage} (rapporté par ${reporter})`
-        )
+        await writeHeritiers(updated, sha, `bot: ${gagnant.nom_personnage} bat ${perdant.nom_personnage} (${reporter})`)
       } catch {
-        return reply('❌ Erreur lors de la mise à jour du classement. Contacte un admin.', true)
+        return reply('❌ Erreur lors de la mise à jour. Contacte un admin.', true)
       }
 
       return reply(
         `⚔️ **Résultat enregistré**\n\n` +
         `🏆 **${gagnant.nom_personnage}** — V${gagnant.wins + 1} · D${gagnant.losses}\n` +
         `💀 **${perdant.nom_personnage}** — V${perdant.wins} · D${perdant.losses + 1}\n\n` +
-        `_Le classement sera mis à jour dans ~30 secondes._`
+        `_Classement mis à jour dans ~30 secondes._`
       )
     }
 
-    // ── /classement ────────────────────────────────────────────────────────
+    // ── /classement ───────────────────────────────────────────────────────
     if (name === 'classement') {
       let heritiers: Awaited<ReturnType<typeof readHeritiers>>['heritiers']
       try {
@@ -111,11 +102,8 @@ export async function POST(request: NextRequest) {
         return reply('❌ Impossible de lire le classement.', true)
       }
 
-      const actifs = heritiers
-        .filter(h => h.actif)
-        .sort((a, b) => a.position - b.position)
-
-      if (actifs.length === 0) return reply('Aucun Héritier actif pour le moment.', true)
+      const actifs = heritiers.filter(h => h.actif).sort((a, b) => a.position - b.position)
+      if (actifs.length === 0) return reply('Aucun Héritier actif pour le moment.')
 
       const lignes = actifs.map(h => {
         const medal = h.position === 1 ? '🥇' : h.position === 2 ? '🥈' : h.position === 3 ? '🥉' : `**${h.position}.**`
@@ -123,7 +111,7 @@ export async function POST(request: NextRequest) {
         return `${medal} ${h.nom_personnage}${clan} — V${h.wins} · D${h.losses}`
       }).join('\n')
 
-      return reply(`**🌫️ Héritiers de la Brume — Classement**\n\n${lignes}`)
+      return reply(`**🌫️ Héritiers de la Brume — Classement officiel**\n\n${lignes}`)
     }
   }
 
