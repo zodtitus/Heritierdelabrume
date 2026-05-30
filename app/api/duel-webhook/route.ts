@@ -1,5 +1,19 @@
 import { NextRequest } from 'next/server'
 
+// Récupère le channel_id depuis l'URL du webhook Discord
+async function getWebhookChannelId(webhookUrl: string, botToken: string): Promise<string | null> {
+  const match = webhookUrl.match(/webhooks\/(\d+)\//)
+  if (!match) return null
+  const webhookId = match[1]
+
+  const res = await fetch(`https://discord.com/api/v10/webhooks/${webhookId}`, {
+    headers: { Authorization: `Bot ${botToken}` },
+  })
+  if (!res.ok) return null
+  const data = await res.json() as { channel_id?: string }
+  return data.channel_id ?? null
+}
+
 async function createMatchThread(
   demandeur_nom: string,
   demandeur_pseudo: string,
@@ -7,13 +21,20 @@ async function createMatchThread(
   cible_nom: string,
   cible_position: number,
 ): Promise<string | null> {
-  const channelId = process.env.DISCORD_MATCH_CHANNEL_ID
-  const botToken  = process.env.DISCORD_BOT_TOKEN
-  if (!channelId || !botToken) return 'DISCORD_MATCH_CHANNEL_ID ou DISCORD_BOT_TOKEN manquant'
+  const botToken   = process.env.DISCORD_BOT_TOKEN
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL
+  if (!botToken) return 'DISCORD_BOT_TOKEN manquant'
 
   const h = { Authorization: `Bot ${botToken}`, 'Content-Type': 'application/json' }
 
-  // 1. Envoyer un message parent dans le salon
+  // Utilise le channel du webhook existant si DISCORD_MATCH_CHANNEL_ID échoue
+  let channelId = process.env.DISCORD_MATCH_CHANNEL_ID
+  if (!channelId && webhookUrl) {
+    channelId = await getWebhookChannelId(webhookUrl, botToken) ?? undefined
+  }
+  if (!channelId) return 'Aucun channel configuré'
+
+  // 1. Message parent dans le salon
   const msgRes = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
     method: 'POST',
     headers: h,
@@ -24,15 +45,44 @@ async function createMatchThread(
 
   if (!msgRes.ok) {
     const err = await msgRes.text()
+    // Si ce channel échoue aussi, essayer le channel du webhook
+    if (channelId === process.env.DISCORD_MATCH_CHANNEL_ID && webhookUrl) {
+      const fallbackId = await getWebhookChannelId(webhookUrl, botToken)
+      if (fallbackId && fallbackId !== channelId) {
+        const retry = await fetch(`https://discord.com/api/v10/channels/${fallbackId}/messages`, {
+          method: 'POST',
+          headers: h,
+          body: JSON.stringify({
+            content: `⚔️ **${demandeur_nom}** défie **${cible_nom}** (place #${cible_position})`,
+          }),
+        })
+        if (retry.ok) {
+          const msg2 = await retry.json() as { id: string }
+          return continueThread(h, fallbackId, msg2.id, demandeur_nom, demandeur_pseudo, cible_id, cible_nom, cible_position)
+        }
+      }
+    }
     return `Erreur message parent: ${msgRes.status} — ${err}`
   }
 
   const msg = await msgRes.json() as { id: string }
+  return continueThread(h, channelId, msg.id, demandeur_nom, demandeur_pseudo, cible_id, cible_nom, cible_position)
+}
 
-  // 2. Créer le thread depuis ce message
+async function continueThread(
+  h: Record<string, string>,
+  channelId: string,
+  messageId: string,
+  demandeur_nom: string,
+  demandeur_pseudo: string,
+  cible_id: string,
+  cible_nom: string,
+  cible_position: number,
+): Promise<string | null> {
+  // 2. Créer thread depuis le message
   const threadName = `⚔️ ${demandeur_nom} vs ${cible_nom}`.slice(0, 100)
   const threadRes = await fetch(
-    `https://discord.com/api/v10/channels/${channelId}/messages/${msg.id}/threads`,
+    `https://discord.com/api/v10/channels/${channelId}/messages/${messageId}/threads`,
     {
       method: 'POST',
       headers: h,
@@ -47,11 +97,11 @@ async function createMatchThread(
 
   const thread = await threadRes.json() as { id: string }
 
-  // 3. Envoyer les boutons de résultat dans le thread
+  // 3. Boutons résultat dans le thread
   const nomSafe    = demandeur_nom.slice(0, 40).replace(/\|/g, '-')
   const pseudoSafe = demandeur_pseudo.slice(0, 20).replace(/\|/g, '-')
 
-  const btnRes = await fetch(`https://discord.com/api/v10/channels/${thread.id}/messages`, {
+  await fetch(`https://discord.com/api/v10/channels/${thread.id}/messages`, {
     method: 'POST',
     headers: h,
     body: JSON.stringify({
@@ -86,12 +136,7 @@ async function createMatchThread(
     }),
   })
 
-  if (!btnRes.ok) {
-    const err = await btnRes.text()
-    return `Erreur boutons dans thread: ${btnRes.status} — ${err}`
-  }
-
-  return null // succès
+  return null
 }
 
 export async function POST(request: NextRequest) {
@@ -99,7 +144,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { demandeur_nom, demandeur_pseudo, cible_id, cible_nom, cible_position, message } = body
 
-    // ── Notification webhook embed ─────────────────────────────────────────
+    // Notification webhook embed
     const webhookUrl = process.env.DISCORD_WEBHOOK_URL
     if (webhookUrl) {
       await fetch(webhookUrl, {
@@ -121,12 +166,10 @@ export async function POST(request: NextRequest) {
       }).catch(() => {})
     }
 
-    // ── Thread de match avec boutons ───────────────────────────────────────
+    // Thread de match
     let threadError: string | null = null
     if (cible_id && cible_position) {
-      threadError = await createMatchThread(
-        demandeur_nom, demandeur_pseudo, cible_id, cible_nom, cible_position
-      )
+      threadError = await createMatchThread(demandeur_nom, demandeur_pseudo, cible_id, cible_nom, cible_position)
     }
 
     return Response.json({ ok: true, threadError })
