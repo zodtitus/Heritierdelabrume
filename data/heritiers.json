@@ -1,0 +1,62 @@
+[
+  {
+    "id": "1",
+    "nom_personnage": "Mizuhime Hōzuki",
+    "pseudo_joueur": "mizuhime_kiri",
+    "rang": "Chūnin Confirmé",
+    "clan": "Hōzuki",
+    "wins": 12,
+    "losses": 2,
+    "titre": "Lame du Silence",
+    "position": 1,
+    "actif": true
+  },
+  {
+    "id": "2",
+    "nom_personnage": "Kagetsu Karatachi",
+    "pseudo_joueur": "kagetsu_rp",
+    "rang": "Chūnin Confirmé",
+    "clan": "Karatachi",
+    "wins": 9,
+    "losses": 3,
+    "titre": "Brouillard Tranchant",
+    "position": 2,
+    "actif": true
+  },
+  {
+    "id": "3",
+    "nom_personnage": "Tenrō Hoshigaki",
+    "pseudo_joueur": "tenro_shark",
+    "rang": "Chūnin Confirmé",
+    "clan": "Hoshigaki",
+    "wins": 8,
+    "losses": 4,
+    "titre": "Requin Immobile",
+    "position": 3,
+    "actif": true
+  },
+  {
+    "id": "4",
+    "nom_personnage": "Saya Tensho",
+    "pseudo_joueur": "sayatensho_rp",
+    "rang": "Chūnin",
+    "clan": null,
+    "wins": 5,
+    "losses": 5,
+    "titre": "Sans Clan, Sans Peur",
+    "position": 4,
+    "actif": true
+  },
+  {
+    "id": "5",
+    "nom_personnage": "Daizo Yokushin",
+    "pseudo_joueur": "daizo_yokushin",
+    "rang": "Chūnin",
+    "clan": "Yokushin",
+    "wins": 3,
+    "losses": 7,
+    "titre": null,
+    "position": 5,
+    "actif": true
+  }
+]
