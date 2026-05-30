@@ -36,6 +36,7 @@ export default function DuelRequestForm({ heritiers }: { heritiers: Heritier[] }
 
   const cible = heritiers.find(h => h.id === cibleId)
 
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
@@ -51,7 +52,9 @@ export default function DuelRequestForm({ heritiers }: { heritiers: Heritier[] }
         body: JSON.stringify({
           demandeur_nom: demandeurNom.trim(),
           demandeur_pseudo: demandeurPseudo.trim(),
+          cible_id: cible.id,
           cible_nom: cible.nom_personnage,
+          cible_position: cible.position,
           message: message.trim() || null,
         }),
       })

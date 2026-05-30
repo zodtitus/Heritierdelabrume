@@ -62,6 +62,7 @@ export async function POST(request: NextRequest) {
 
   const i = JSON.parse(rawBody) as {
     type: number
+    channel_id?: string
     data?: { name?: string; custom_id?: string; values?: string[]; options?: { name: string; value: string }[] }
     member?: { user: { username: string } }
     user?: { username: string }
@@ -174,7 +175,111 @@ export async function POST(request: NextRequest) {
     if (custom_id === 'cancel') {
       return update('❌ Résultat annulé.', [])
     }
+
+    // ── Bouton ticket match : challenger gagne ─────────────────────────────
+    // custom_id : cw|{cible_id}|{challenger_nom}|{challenger_pseudo}
+    if (custom_id?.startsWith('cw|')) {
+      const parts = custom_id.split('|')
+      const cibleId        = parts[1]
+      const challengerNom  = parts[2] ?? 'Inconnu'
+      const challengerPseudo = parts[3] ?? ''
+
+      let ghHeritiers: Heritier[], sha: string
+      try { ({ heritiers: ghHeritiers, sha } = await readHeritiers()) }
+      catch { return update('❌ Impossible de lire le classement. Réessaie.', []) }
+
+      const cible = ghHeritiers.find(h => h.id === cibleId)
+      if (!cible) return update('❌ Héritier introuvable.', [])
+
+      const ciblePos = cible.position
+
+      // Décaler tous les héritiers à partir de la position cible
+      const shifted = ghHeritiers.map(h => {
+        if (h.id === cibleId) return { ...h, losses: h.losses + 1, position: h.position + 1 }
+        if (h.position >= ciblePos) return { ...h, position: h.position + 1 }
+        return h
+      })
+
+      // Ajouter le challenger à la position libérée
+      const newChallenger: Heritier = {
+        id: Date.now().toString(),
+        nom_personnage: challengerNom,
+        pseudo_joueur: challengerPseudo,
+        rang: 'Chūnin',
+        clan: null,
+        wins: 1,
+        losses: 0,
+        titre: null,
+        position: ciblePos,
+        actif: true,
+      }
+
+      const withChallenger = [...shifted, newChallenger]
+      // Retirer les places vacantes poussées au-delà de 10
+      const final = withChallenger.filter(h => h.position <= 10 || !h.vacant)
+
+      try {
+        await writeHeritiers(final, sha,
+          `bot: ${challengerNom} bat ${cible.nom_personnage} — prend la place #${ciblePos}`)
+      } catch {
+        return update('❌ Erreur de sauvegarde. Contacte un admin.', [])
+      }
+
+      // Archiver le thread
+      archiveThread(i.channel_id, process.env.DISCORD_BOT_TOKEN)
+
+      return update(
+        `✅ **Résultat enregistré !**\n\n` +
+        `🏆 **${challengerNom}** prend la place **#${ciblePos}**\n` +
+        `📉 **${cible.nom_personnage}** descend à la place #${ciblePos + 1} ` +
+        `(V${cible.wins} · D${cible.losses + 1})\n\n` +
+        `*Classement mis à jour dans ~30 secondes.*`,
+        []
+      )
+    }
+
+    // ── Bouton ticket match : héritier gagne ───────────────────────────────
+    // custom_id : hw|{cible_id}
+    if (custom_id?.startsWith('hw|')) {
+      const cibleId = custom_id.split('|')[1]
+
+      let ghHeritiers: Heritier[], sha: string
+      try { ({ heritiers: ghHeritiers, sha } = await readHeritiers()) }
+      catch { return update('❌ Impossible de lire le classement. Réessaie.', []) }
+
+      const cible = ghHeritiers.find(h => h.id === cibleId)
+      if (!cible) return update('❌ Héritier introuvable.', [])
+
+      const updated = ghHeritiers.map(h =>
+        h.id === cibleId ? { ...h, wins: h.wins + 1 } : h
+      )
+
+      try {
+        await writeHeritiers(updated, sha,
+          `bot: ${cible.nom_personnage} conserve sa place #${cible.position}`)
+      } catch {
+        return update('❌ Erreur de sauvegarde. Contacte un admin.', [])
+      }
+
+      archiveThread(i.channel_id, process.env.DISCORD_BOT_TOKEN)
+
+      return update(
+        `🛡️ **${cible.nom_personnage}** conserve sa place **#${cible.position}** !\n\n` +
+        `V${cible.wins + 1} · D${cible.losses}\n\n` +
+        `*Classement mis à jour dans ~30 secondes.*`,
+        []
+      )
+    }
   }
 
   return Response.json({ type: 1 })
+}
+
+function archiveThread(channelId: string | undefined, botToken: string | undefined) {
+  if (!channelId || !botToken) return
+  fetch(`https://discord.com/api/v10/channels/${channelId}`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bot ${botToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ archived: true, locked: true }),
+  }).catch(() => {})
 }
