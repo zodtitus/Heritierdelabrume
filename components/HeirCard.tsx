@@ -97,29 +97,8 @@ export default function HeirCard({ heritier, index }: HeirCardProps) {
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
-          <span style={{
-            display: 'inline-block',
-            padding: '2px 10px',
-            borderRadius: '99px',
-            fontSize: '0.7rem',
-            fontWeight: 600,
-            letterSpacing: '0.04em',
-            textTransform: 'uppercase',
-            background: heritier.rang === 'Chūnin Confirmé'
-              ? 'rgba(77,208,225,0.12)'
-              : 'rgba(138,180,201,0.12)',
-            color: heritier.rang === 'Chūnin Confirmé'
-              ? 'var(--color-ice)'
-              : 'var(--color-silver)',
-            border: heritier.rang === 'Chūnin Confirmé'
-              ? '1px solid rgba(77,208,225,0.3)'
-              : '1px solid rgba(138,180,201,0.2)',
-          }}>
-            {heritier.rang}
-          </span>
-
-          {heritier.titre && (
+        {heritier.titre && (
+          <div style={{ marginTop: '0.4rem' }}>
             <span style={{
               fontSize: '0.78rem',
               color: 'var(--color-gold-mist)',
@@ -127,8 +106,8 @@ export default function HeirCard({ heritier, index }: HeirCardProps) {
             }}>
               « {heritier.titre} »
             </span>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Bilan */}

@@ -1,9 +1,14 @@
+import { NextResponse } from 'next/server'
 import { ADMIN_COOKIE } from '@/lib/auth'
 
 export async function POST() {
-  return Response.json({ ok: true }, {
-    headers: {
-      'Set-Cookie': `${ADMIN_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0`,
-    },
+  const response = NextResponse.json({ ok: true })
+  response.cookies.set(ADMIN_COOKIE, '', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 0,
   })
+  return response
 }
