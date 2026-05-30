@@ -3,7 +3,7 @@ import DuelRequestForm from '@/components/DuelRequestForm'
 import type { Heritier } from '@/lib/types'
 
 const heritiers = (heritieursData as Heritier[])
-  .filter(h => h.actif)
+  .filter(h => h.actif && !h.vacant)
   .sort((a, b) => a.position - b.position)
 
 export default function DuelPage() {

@@ -82,5 +82,44 @@
     "titre": null,
     "position": 7,
     "actif": true
+  },
+  {
+    "id": "8",
+    "nom_personnage": "",
+    "pseudo_joueur": "",
+    "rang": "Chūnin",
+    "clan": null,
+    "wins": 0,
+    "losses": 0,
+    "titre": null,
+    "position": 8,
+    "actif": true,
+    "vacant": true
+  },
+  {
+    "id": "9",
+    "nom_personnage": "",
+    "pseudo_joueur": "",
+    "rang": "Chūnin",
+    "clan": null,
+    "wins": 0,
+    "losses": 0,
+    "titre": null,
+    "position": 9,
+    "actif": true,
+    "vacant": true
+  },
+  {
+    "id": "10",
+    "nom_personnage": "",
+    "pseudo_joueur": "",
+    "rang": "Chūnin",
+    "clan": null,
+    "wins": 0,
+    "losses": 0,
+    "titre": null,
+    "position": 10,
+    "actif": true,
+    "vacant": true
   }
 ]

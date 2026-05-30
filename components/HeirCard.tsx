@@ -13,6 +13,54 @@ export default function HeirCard({ heritier, index }: HeirCardProps) {
   const isTop3 = (heritier.position ?? 99) <= 3
   const pos = heritier.position ?? index + 1
 
+  // Place vacante
+  if (heritier.vacant) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: index * 0.06 }}
+        style={{
+          position: 'relative',
+          background: 'transparent',
+          border: '1px dashed rgba(26,51,68,0.8)',
+          borderRadius: '8px',
+          padding: '1rem 1.5rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '1.25rem',
+          opacity: 0.45,
+        }}
+      >
+        <div style={{
+          minWidth: '2.5rem',
+          textAlign: 'center',
+          fontFamily: 'var(--font-shippori), Georgia, serif',
+          fontSize: '1.5rem',
+          fontWeight: 700,
+          color: 'var(--color-mist)',
+          lineHeight: 1,
+        }}>
+          {pos}
+        </div>
+        <div style={{
+          width: '1px', height: '36px',
+          background: 'linear-gradient(to bottom, transparent, var(--color-mist), transparent)',
+          flexShrink: 0,
+        }} />
+        <div style={{
+          flex: 1,
+          fontSize: '0.85rem',
+          color: 'var(--color-silver)',
+          fontStyle: 'italic',
+          letterSpacing: '0.04em',
+        }}>
+          Place vacante
+        </div>
+      </motion.div>
+    )
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}

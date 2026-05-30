@@ -11,4 +11,5 @@ export interface Heritier {
   titre: string | null
   position: number
   actif: boolean
+  vacant?: boolean
 }
