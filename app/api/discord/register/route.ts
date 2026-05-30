@@ -13,26 +13,36 @@ const COMMANDS = [
 ]
 
 export async function GET(request: NextRequest) {
-  const secret = new URL(request.url).searchParams.get('secret')
+  const { searchParams } = new URL(request.url)
+  const secret  = searchParams.get('secret')
+  const guildId = searchParams.get('guildId')
+
   const validSecret = secret && process.env.REGISTER_SECRET && secret === process.env.REGISTER_SECRET
   const isAdmin = await getAdminSession()
-
   if (!isAdmin && !validSecret) {
     return Response.json({ error: 'Non autorisé' }, { status: 401 })
   }
 
   const appId = process.env.DISCORD_APPLICATION_ID!
-  const token = process.env.DISCORD_BOT_TOKEN!
+  const token  = process.env.DISCORD_BOT_TOKEN!
 
-  const res = await fetch(`https://discord.com/api/v10/applications/${appId}/commands`, {
+  // Commandes de serveur (instant) ou globales (jusqu'à 1h)
+  const url = guildId
+    ? `https://discord.com/api/v10/applications/${appId}/guilds/${guildId}/commands`
+    : `https://discord.com/api/v10/applications/${appId}/commands`
+
+  const res = await fetch(url, {
     method: 'PUT',
     headers: { Authorization: `Bot ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(COMMANDS),
   })
 
-  if (!res.ok) {
-    return Response.json({ ok: false, error: await res.text() }, { status: 502 })
-  }
+  const data = await res.json()
+  if (!res.ok) return Response.json({ ok: false, error: data }, { status: 502 })
 
-  return Response.json({ ok: true, commands: await res.json() })
+  return Response.json({
+    ok: true,
+    mode: guildId ? `serveur (${guildId})` : 'global',
+    commands: data,
+  })
 }
