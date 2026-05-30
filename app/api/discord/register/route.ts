@@ -1,3 +1,4 @@
+import { type NextRequest } from 'next/server'
 import { getAdminSession } from '@/lib/auth'
 
 const COMMANDS = [
@@ -11,8 +12,12 @@ const COMMANDS = [
   },
 ]
 
-export async function GET() {
-  if (!await getAdminSession()) {
+export async function GET(request: NextRequest) {
+  const secret = new URL(request.url).searchParams.get('secret')
+  const validSecret = secret && process.env.REGISTER_SECRET && secret === process.env.REGISTER_SECRET
+  const isAdmin = await getAdminSession()
+
+  if (!isAdmin && !validSecret) {
     return Response.json({ error: 'Non autorisé' }, { status: 401 })
   }
 
