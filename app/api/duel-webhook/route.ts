@@ -122,13 +122,19 @@ async function continueThread(
           {
             type: 2,
             custom_id: `cw|${cible_id}|${nomSafe}|${pseudoSafe}`,
-            label: `🏆 ${demandeur_nom.slice(0, 25)} gagne`,
+            label: `🏆 ${demandeur_nom.slice(0, 20)} gagne`,
             style: 3,
           },
           {
             type: 2,
             custom_id: `hw|${cible_id}`,
-            label: `🛡️ ${cible_nom.slice(0, 25)} conserve`,
+            label: `🛡️ ${cible_nom.slice(0, 20)} conserve`,
+            style: 1,
+          },
+          {
+            type: 2,
+            custom_id: 'mc',
+            label: '❌ Annuler le match',
             style: 4,
           },
         ],

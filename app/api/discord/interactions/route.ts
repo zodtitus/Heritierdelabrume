@@ -171,9 +171,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Annulation
+    // Annulation résultat /resultat
     if (custom_id === 'cancel') {
       return update('❌ Résultat annulé.', [])
+    }
+
+    // Annulation match depuis ticket
+    if (custom_id === 'mc') {
+      archiveThread(i.channel_id, process.env.DISCORD_BOT_TOKEN)
+      return update('❌ **Match annulé.** Aucune modification du classement.', [])
     }
 
     // ── Bouton ticket match : challenger gagne ─────────────────────────────
