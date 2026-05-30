@@ -6,32 +6,52 @@ async function createMatchThread(
   cible_id: string,
   cible_nom: string,
   cible_position: number,
-) {
+): Promise<string | null> {
   const channelId = process.env.DISCORD_MATCH_CHANNEL_ID
   const botToken  = process.env.DISCORD_BOT_TOKEN
-  if (!channelId || !botToken) return
+  if (!channelId || !botToken) return 'DISCORD_MATCH_CHANNEL_ID ou DISCORD_BOT_TOKEN manquant'
 
   const h = { Authorization: `Bot ${botToken}`, 'Content-Type': 'application/json' }
 
-  // 1. Créer le thread
-  const threadRes = await fetch(`https://discord.com/api/v10/channels/${channelId}/threads`, {
+  // 1. Envoyer un message parent dans le salon
+  const msgRes = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
     method: 'POST',
     headers: h,
     body: JSON.stringify({
-      name: `⚔️ ${demandeur_nom} vs ${cible_nom}`,
-      type: 11,               // PUBLIC_THREAD
-      auto_archive_duration: 1440,
+      content: `⚔️ **${demandeur_nom}** défie **${cible_nom}** (place #${cible_position})`,
     }),
   })
-  if (!threadRes.ok) return
+
+  if (!msgRes.ok) {
+    const err = await msgRes.text()
+    return `Erreur message parent: ${msgRes.status} — ${err}`
+  }
+
+  const msg = await msgRes.json() as { id: string }
+
+  // 2. Créer le thread depuis ce message
+  const threadName = `⚔️ ${demandeur_nom} vs ${cible_nom}`.slice(0, 100)
+  const threadRes = await fetch(
+    `https://discord.com/api/v10/channels/${channelId}/messages/${msg.id}/threads`,
+    {
+      method: 'POST',
+      headers: h,
+      body: JSON.stringify({ name: threadName, auto_archive_duration: 1440 }),
+    }
+  )
+
+  if (!threadRes.ok) {
+    const err = await threadRes.text()
+    return `Erreur création thread: ${threadRes.status} — ${err}`
+  }
+
   const thread = await threadRes.json() as { id: string }
 
-  // Tronquer pour respecter la limite de 100 chars du custom_id
+  // 3. Envoyer les boutons de résultat dans le thread
   const nomSafe    = demandeur_nom.slice(0, 40).replace(/\|/g, '-')
   const pseudoSafe = demandeur_pseudo.slice(0, 20).replace(/\|/g, '-')
 
-  // 2. Envoyer le message avec les boutons dans le thread
-  await fetch(`https://discord.com/api/v10/channels/${thread.id}/messages`, {
+  const btnRes = await fetch(`https://discord.com/api/v10/channels/${thread.id}/messages`, {
     method: 'POST',
     headers: h,
     body: JSON.stringify({
@@ -65,11 +85,19 @@ async function createMatchThread(
       }],
     }),
   })
+
+  if (!btnRes.ok) {
+    const err = await btnRes.text()
+    return `Erreur boutons dans thread: ${btnRes.status} — ${err}`
+  }
+
+  return null // succès
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { demandeur_nom, demandeur_pseudo, cible_id, cible_nom, cible_position, message } = await request.json()
+    const body = await request.json()
+    const { demandeur_nom, demandeur_pseudo, cible_id, cible_nom, cible_position, message } = body
 
     // ── Notification webhook embed ─────────────────────────────────────────
     const webhookUrl = process.env.DISCORD_WEBHOOK_URL
@@ -83,7 +111,7 @@ export async function POST(request: NextRequest) {
             color: 0x4dd0e1,
             fields: [
               { name: 'Challenger', value: `${demandeur_nom} (${demandeur_pseudo})`, inline: true },
-              { name: 'Cible', value: `${cible_nom} (#${cible_position})`, inline: true },
+              { name: 'Cible', value: `${cible_nom} (#${cible_position ?? '?'})`, inline: true },
               { name: 'Message', value: message || '*Aucun message*', inline: false },
             ],
             footer: { text: 'Héritier de la Brume · Kirigakure' },
@@ -93,12 +121,15 @@ export async function POST(request: NextRequest) {
       }).catch(() => {})
     }
 
-    // ── Thread de match avec boutons résultat ──────────────────────────────
+    // ── Thread de match avec boutons ───────────────────────────────────────
+    let threadError: string | null = null
     if (cible_id && cible_position) {
-      await createMatchThread(demandeur_nom, demandeur_pseudo, cible_id, cible_nom, cible_position)
+      threadError = await createMatchThread(
+        demandeur_nom, demandeur_pseudo, cible_id, cible_nom, cible_position
+      )
     }
 
-    return Response.json({ ok: true })
+    return Response.json({ ok: true, threadError })
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Erreur inconnue'
     return Response.json({ ok: false, error: msg }, { status: 500 })
