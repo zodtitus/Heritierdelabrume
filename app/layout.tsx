@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Shippori_Mincho, DM_Sans } from 'next/font/google'
 import './globals.css'
 import MistBackground from '@/components/MistBackground'
+import RainEffect from '@/components/RainEffect'
 import NavBar from '@/components/NavBar'
 
 const shipporiMincho = Shippori_Mincho({
@@ -32,6 +33,7 @@ export default function RootLayout({
     <html lang="fr" className={`${shipporiMincho.variable} ${dmSans.variable}`}>
       <body className="relative min-h-screen" style={{ fontFamily: 'var(--font-dm-sans), system-ui, sans-serif' }}>
         <MistBackground />
+        <RainEffect />
         <NavBar />
         <main className="relative z-10">
           {children}
