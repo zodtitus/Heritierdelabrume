@@ -1,12 +1,12 @@
-import heritieursData from '@/data/heritiers.json'
+import { getActiveHeritiers } from '@/lib/db'
 import DuelRequestForm from '@/components/DuelRequestForm'
 import type { Heritier } from '@/lib/types'
 
-const heritiers = (heritieursData as Heritier[])
-  .filter(h => h.actif && !h.vacant)
-  .sort((a, b) => a.position - b.position)
+export const dynamic = 'force-dynamic'
 
-export default function DuelPage() {
+export default async function DuelPage() {
+  const heritiers = (await getActiveHeritiers()).filter(h => !h.vacant) as Heritier[]
+
   return (
     <div style={{ maxWidth: '700px', margin: '0 auto', padding: '3rem 1.5rem 5rem' }}>
       <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>

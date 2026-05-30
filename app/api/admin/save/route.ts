@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { getAdminSession } from '@/lib/auth'
-import { readHeritiers, writeHeritiers } from '@/lib/github'
+import { saveAllHeritiers } from '@/lib/db'
 import type { Heritier } from '@/lib/types'
 
 export async function POST(request: NextRequest) {
@@ -10,14 +10,10 @@ export async function POST(request: NextRequest) {
 
   try {
     const { heritiers } = await request.json() as { heritiers: Heritier[] }
-
     if (!Array.isArray(heritiers)) {
       return Response.json({ error: 'Données invalides' }, { status: 400 })
     }
-
-    const { sha } = await readHeritiers()
-    await writeHeritiers(heritiers, sha, 'admin: mise à jour classement via interface')
-
+    await saveAllHeritiers(heritiers)
     return Response.json({ ok: true })
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Erreur inconnue'

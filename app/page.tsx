@@ -1,13 +1,12 @@
 import Link from 'next/link'
-import heritieursData from '@/data/heritiers.json'
+import { getActiveHeritiers } from '@/lib/db'
 import HeritiersBoard from '@/components/HeritiersBoard'
-import type { Heritier } from '@/lib/types'
 
-const heritiers = (heritieursData as Heritier[])
-  .filter(h => h.actif)
-  .sort((a, b) => a.position - b.position)
+export const dynamic = 'force-dynamic'
 
-export default function HomePage() {
+export default async function HomePage() {
+  const heritiers = await getActiveHeritiers()
+
   return (
     <div style={{ maxWidth: '900px', margin: '0 auto', padding: '3rem 1.5rem 5rem' }}>
       <div style={{ textAlign: 'center', marginBottom: '3rem' }}>

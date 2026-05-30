@@ -1,7 +1,9 @@
-import heritieursData from '@/data/heritiers.json'
+import { getHeritiers } from '@/lib/db'
 import AdminEditor from '@/components/AdminEditor'
-import type { Heritier } from '@/lib/types'
 
-export default function AdminPage() {
-  return <AdminEditor initialData={heritieursData as Heritier[]} />
+export const dynamic = 'force-dynamic'
+
+export default async function AdminPage() {
+  const heritiers = await getHeritiers()
+  return <AdminEditor initialData={heritiers} />
 }
